@@ -27,7 +27,9 @@ class MySqlAlchemy:
         # value_str = [str(elm) for elm in values]
         value_str = []
         for elm in values:
-            if isinstance(elm, int):
+            if elm is None:
+                value_str.append("NULL")
+            elif isinstance(elm, int):
                 value_str.append(str(elm))
             elif isinstance(elm, str):
                 value_str.append('"' + elm + '"')

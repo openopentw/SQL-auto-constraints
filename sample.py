@@ -3,6 +3,7 @@ import getpass
 import pandas as pd
 
 from my_sqlalchemy import create_engine
+#from trigger import create_engine
 
 def run():
     """ Run! """
@@ -19,7 +20,7 @@ def run():
     engine.create_table(table_name, (('ID', 'int'),
                                      ('Name', 'varchar(255)')))
 
-    engine.insert(table_name, ('ID', 'name'), ((0, 'hi'), (1, 'NULL')))
+    engine.insert(table_name, ('ID', 'name'), ((None, 'hi'), (1, 'NULL')))
 
     print(pd.read_sql_query(f'SELECT * FROM {table_name}', engine._engine))
     ana_table_name = engine._make_ana_name(table_name, "null")
