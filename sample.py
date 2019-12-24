@@ -11,7 +11,7 @@ def run():
     table_name = 'person'
 
     sql_password = getpass.getpass()
-    create_str = (f'mysql+mysqldb://root:{sql_password}@localhost/'
+    create_str = (f'mysql+mysqlconnector://root:{sql_password}@localhost/'
                   f'{database}?charset=utf8mb4')
     engine = create_engine(create_str)
 
@@ -22,7 +22,7 @@ def run():
     engine.insert(table_name, ('ID', 'name'), ((0, 'hi'), (1, 'NULL')))
 
     print(pd.read_sql_query(f'SELECT * FROM {table_name}', engine._engine))
-    ana_table_name = engine._make_ana_name(table_name)
+    ana_table_name = engine._make_ana_name(table_name, "null")
     print(pd.read_sql_query(f'SELECT * FROM {ana_table_name}', engine._engine))
 
     engine.drop_table(table_name)

@@ -11,12 +11,13 @@ class MySqlAlchemy:
     def __init__(self, create_str):
         self._engine = their_create_engine(create_str)
         self._print_debug_msg = False
+        self._constraints = ['null', 'default', 'unique']
 
     # transfer strings
 
-    def _make_ana_name(self, table_name): # pylint: disable=no-self-use
+    def _make_ana_name(self, table_name, constrain): # pylint: disable=no-self-use
         """ Convert normal table_name to analysis table_name. """
-        return f'_{table_name}_analysis'
+        return f'_{table_name}_{constrain}_analysis'
 
     def __value_to_str_1d(self, values): # pylint: disable=no-self-use
         """
@@ -96,13 +97,15 @@ class MySqlAlchemy:
         """
         self._create_table(table_name, cols)
 
-        ana_table_name = self._make_ana_name(table_name)
-        self._create_table(ana_table_name, (('col_name', 'varchar(255)'),
-                                            ('null_cnt', 'int')))
-        ana_cols = []
-        for col in cols:
-            ana_cols.append([col[0], 0])
-        self._insert(ana_table_name, ('col_name', 'null_cnt'), ana_cols)
+        for cons in self._constraints:
+            print(f'{cons}_cnt')
+            ana_table_name = self._make_ana_name(table_name, cons)
+            self._create_table(ana_table_name, (('col_name', 'varchar(255)'),
+                                            (f'{cons}_cnt', 'int')))
+            ana_cols = []
+            for col in cols:
+                ana_cols.append([col[0], 0])
+            self._insert(ana_table_name, ('col_name', f'{cons}_cnt'), ana_cols)
 
     def drop_table(self, table_name):
         """ Drop table.
@@ -110,7 +113,9 @@ class MySqlAlchemy:
             table_name: str
         """
         self._drop_table(table_name)
-        self._drop_table(self._make_ana_name(table_name))
+        
+        for cons in self._constraints:
+            self._drop_table(self._make_ana_name(table_name, cons))
 
     # modify rows
 
@@ -138,7 +143,7 @@ class MySqlAlchemy:
             sql_str += f' WHERE {cond}'
         self._execute(sql_str)
 
-    def _insert_ana_not_null(self, ana_table_name, cols, vals):
+    def _insert_ana_null(self, ana_table_name, cols, vals):
         """ Check Not Null constraint. """
         # cols not in col_name
         in_col = ','.join(['"' + col + '"' for col in cols])
@@ -157,6 +162,13 @@ class MySqlAlchemy:
                 self._update(ana_table_name,
                              [['null_cnt', f'null_cnt+{null_cnt[i]}']],
                              f'col_name = "{col}"')
+    def _insert_ana_default(self, ana_table_name, cols, vals):
+        ### TO-DO
+        pass
+    
+    def _insert_ana_unique(self, ana_table_name, cols, vals):
+        ## TO-DO
+        pass
 
     def insert(self, table_name, cols, vals):
         """ Insert into sql.
@@ -166,8 +178,9 @@ class MySqlAlchemy:
         """
         self._insert(table_name, cols, vals)
 
-        ana_table_name = self._make_ana_name(table_name)
-        self._insert_ana_not_null(ana_table_name, cols, vals)
+        for cons in self._constraints:
+            ana_table_name = self._make_ana_name(table_name, cons)
+            eval(f'self._insert_ana_{cons}(ana_table_name, cols, vals)')
 
     def delete(self, table_name, cond):
         """ Delete some rows. """
