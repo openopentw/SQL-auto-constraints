@@ -7,7 +7,7 @@ def create_engine(create_str):
     return MySqlAlchemy(create_str)
 
 class MySqlAlchemy(EngineBase):
-    """ Base class for my sqlalchemy. """
+    """class for PyAPI Mysqlalchemy. """
     def __init__(self, create_str):
         super().__init__(create_str)
         print("You are Using python API to do analyzation.")
