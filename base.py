@@ -97,6 +97,19 @@ class EngineBase(ABC):
             sql_str += f' WHERE {cond}'
         self._execute(sql_str)
     
+    def _select(self, table_name, cols, cond=''):
+        """ Update rows in a table.
+        Args:
+            cols: (List/Tuple) [str/int]
+            cond: str
+        """
+        cols_str = ','.join(cols)
+        sql_str = (f'SELECT {cols_str}'
+                   f' FROM {table_name}')
+        if cond:
+            sql_str += f' WHERE {cond}'
+        return self._execute(sql_str)
+
     @abstractmethod
     def create_table(self, table_name, cols):
         pass

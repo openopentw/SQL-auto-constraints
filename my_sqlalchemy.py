@@ -1,6 +1,7 @@
 """ Base class for my sqlalchemy. """
 
 from base import EngineBase
+import warnings
 
 def create_engine(create_str):
     """ My create engine. """
@@ -35,9 +36,18 @@ class MySqlAlchemy(EngineBase):
         self._update(ana_table_name,
                     [['total_cnt', f'total_cnt+{len(vals)}']])
 
+        ana_table = self._select(ana_table_name, ['*'])
+        for row in ana_table:
+            col_name = row['col_name']
+            confidence = 1-row['null_cnt']/row['total_cnt']
+            col_null_cnt = null_cnt[cols.index(col_name)]
+            if confidence > 0.95 and col_null_cnt > 0:
+                warnings.warn(f'Values in column {col_name} should not be NULL.')
+
     def _insert_ana_default(self, ana_table_name, cols, vals):
         ### TO-DO
         pass
+        
     
     def _insert_ana_unique(self, ana_table_name, cols, vals):
         ## TO-DO
