@@ -1,6 +1,8 @@
 from sqlalchemy import create_engine as their_create_engine
+from abc import ABC
+from abc import abstractmethod
 
-class EngineBase:
+class EngineBase(ABC):
     """ Base class for sqlalchemy engine"""
     def __init__(self, create_str):
         self._engine = their_create_engine(create_str)
@@ -94,18 +96,23 @@ class EngineBase:
         if cond:
             sql_str += f' WHERE {cond}'
         self._execute(sql_str)
-
-    def create_table(self, table_name, cols):
-        raise NotImplementedError
     
+    @abstractmethod
+    def create_table(self, table_name, cols):
+        pass
+    
+    @abstractmethod
     def drop_table(self, table_name):
-        raise NotImplementedError
-
+        pass
+    
+    @abstractmethod
     def execute(self, *args, **kwargs):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod
     def insert(self, *args, **kwargs):
-        raise NotImplementedError
+        pass
 
+    @abstractmethod    
     def delete(self, *args, **kwargs):
-        raise NotImplementedError
+        pass
