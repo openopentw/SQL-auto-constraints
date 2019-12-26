@@ -1,10 +1,17 @@
 # SQL-auto-constraints
 
-Type `python sample.py` to create engines, insert data, and drop that table.
+There are two ways for implementation, python API and Trigger.
+Please change the environment variable `method` before you run the program. 
+
+The following commands are two different ways to create engines, insert data, and drop that table, respectively.
+```
+(for trigger) $export method=trigger; python sample.py
+(for python API) $export method=pyapi; python sample.py 
+```
 
 Remember to create database 'test' before executing this `sample.py`.
 
-The main codes are in `my_sqlalchemy.py`.
+The main codes are in `my_sqlalchemy.py`, `trigger.py`.
 
 ### 12/21 - Some Informations
 
