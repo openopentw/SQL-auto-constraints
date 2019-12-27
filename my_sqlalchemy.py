@@ -2,6 +2,7 @@
 
 from base import EngineBase
 import warnings
+from itertools import combinations
 
 def create_engine(create_str):
     """ My create engine. """
@@ -53,7 +54,6 @@ class MySqlAlchemy(EngineBase):
         """Check UNIQUE constraints"""
 
         #create columns combinations and list of counts
-        from itertools import combinations
         agree_combine = []
         for set_len in range(1,len(cols)+1):
             for combines in combinations(cols , set_len):
@@ -153,14 +153,27 @@ class MySqlAlchemy(EngineBase):
         self._create_table(table_name, cols)
 
         for cons in self._constraints:
-            ana_table_name = self._make_ana_name(table_name, cons)
-            self._create_table(ana_table_name, (('col_name', 'varchar(255)'),
-                                            (f'{cons}_cnt', 'int'),
-                                            ('total_cnt', 'int')))
-            ana_cols = []
-            for col in cols:
-                ana_cols.append([col[0], 0, 0])
-            self._insert(ana_table_name, ('col_name', f'{cons}_cnt', 'total_cnt'), ana_cols)
+            if cons == 'null':
+                ana_table_name = self._make_ana_name(table_name, cons)
+                self._create_table(ana_table_name, (('col_name', 'varchar(255)'),
+                                                (f'{cons}_cnt', 'int'),
+                                                ('total_cnt', 'int')))
+                ana_cols = []
+                for col in cols:
+                    ana_cols.append([col[0], 0, 0])
+                self._insert(ana_table_name, ('col_name', f'{cons}_cnt', 'total_cnt'), ana_cols)
+
+            if cons == 'unique':
+                ana_table_name = self._make_ana_name(table_name, cons)
+                self._create_table(ana_table_name, (('col_name', 'varchar(255)'),
+                                                    (f'{cons}_cnt', 'int')))
+                all_combine = []
+                for set_len in range(1,len(cols)+1):
+                    for combines in combinations(cols , set_len):
+                        all_combine.append([list(combines), 0])
+                self._insert(ana_table_name, ('col_name', f'{cons}_cnt'), all_combine)
+
+
 
     def drop_table(self, table_name):
         """ Drop table.
