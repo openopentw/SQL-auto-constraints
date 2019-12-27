@@ -62,8 +62,7 @@ class MySqlAlchemy(EngineBase):
         agree_cnt = [0]*len(agree_combine)
         
         #select existing data
-        sql_str = (f'SELECT * from {table_name}')
-        exist_row = self._execute(sql_str)
+        exist_row = self._select(table_name, ['*'])
 
         #find agree set
         agree_set = []
