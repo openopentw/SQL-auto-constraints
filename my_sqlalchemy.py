@@ -50,8 +50,73 @@ class MySqlAlchemy(EngineBase):
         
     
     def _insert_ana_unique(self, ana_table_name, cols, vals):
-        ## TO-DO
-        pass
+        """Check UNIQUE constraints"""
+
+        #create columns combinations and list of counts
+        from itertools import combinations
+        agree_combine = []
+        for set_len in range(1,len(cols)+1):
+            for combines in combinations(cols , set_len):
+                agree_combine.append(list(combines))
+
+        agree_cnt = [0]*len(agree_combine)
+        
+        #select existing data
+        sql_str = (f'SELECT * from {table_name}')
+        exist_row = self._execute(sql_str)
+
+        #find agree set
+        agree_set = []
+        #compare with existing rows
+        if len(exist_row) > 0 :
+
+            for row in exist_row:
+                for new_row in vals:
+                    agree_col = []
+                    for i in range(len(cols)):
+                        if len(set(row[i],new_row[i])) < 2:
+                            agree_col.append(cols[i])
+                    agree_cnt[agree_combine.index(agree_col)] += 1
+                    agree_set.append(agree_col)
+        
+        #compare between new insert rows
+        if len(vals) > 1 :
+
+            for row_num in range(len(vals)-1):
+                row_one = vals[row_num]
+                for nxt_row_num in range(row_num+1 , len(vals)):
+                    row_two = vals[nxt_row_num]
+                    agree_col = []
+                    for i in range(len(cols)):
+                        if len(set(row_one[i],row_two[i])) < 2:
+                            agree_col.append(cols[i])
+                    agree_cnt[agree_combine.index(agree_col)] += 1
+                    agree_set.append(agree_col)
+
+
+
+        #save counts to ana_table
+        for i, combine in agree_combine:
+            if agree_cnt[i] > 0:
+                self._update(ana_table_name , 
+                            [['agree_cnt' , f'agree_cnt+{agree_cnt[i]}']],
+                            f'col_name = "{combine}"')
+
+        #find disagree set
+        disagree_set = []
+        for columns in agree_set:
+            disagree_col = set(cols) - set(columns)
+            disagree_set.append(disagree_col)
+
+        #find necessary disagree set
+        disagree_set.sort(key=lambda x: len(x))
+        nec_disagree_set = []
+        while disagree_set:
+            columns = disagree_set[0]
+            nec_disagree_set.append(columns)
+            disagree_set = [ x for x in disagree_set[1:] if not columns.issubset(x) ]
+
+        #transversal
 
     # execute sql commands
 
