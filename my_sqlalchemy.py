@@ -98,7 +98,7 @@ class MySqlAlchemy(EngineBase):
         for i, combine in agree_combine:
             if agree_cnt[i] > 0:
                 self._update(ana_table_name , 
-                            [['agree_cnt' , f'agree_cnt+{agree_cnt[i]}']],
+                            [['unique_cnt' , f'unique_cnt+{agree_cnt[i]}']],
                             f'col_name = "{combine}"')
 
         #find disagree set
@@ -116,6 +116,26 @@ class MySqlAlchemy(EngineBase):
             disagree_set = [ x for x in disagree_set[1:] if not columns.issubset(x) ]
 
         #transversal
+        elm = set.union(*nec_disagree_set)
+
+        elm_combine = []
+        for set_len in range(1,len(elm)+1):
+            for combines in combinations(elm , set_len):
+                elm_combine.append(set(combines))
+
+
+        for nec_dis in nec_disagree_set:
+            all_unique_set = [x for x in elm_combine if len(nec_dis.intersection(x)) > 0]
+            elm_combine = all_unique_set
+
+        all_unique_set.sort(key=lambda x: len(x))
+        unique_set = []
+        while all_unique_set:
+            columns = all_unique_set[0]
+            unique_set.append(columns)
+            all_unique_set = [ x for x in all_unique_set[1:] if not columns.issubset(x) ]
+
+        #warning
 
     # execute sql commands
 
