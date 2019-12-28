@@ -5,8 +5,11 @@ Please change the environment variable `method` before you run the program.
 
 The following commands are two different ways to create engines, insert data, and drop that table, respectively.
 ```
-(for trigger) $export method=trigger; python sample.py
-(for python API) $export method=pyapi; python sample.py 
+(for trigger) $python sample.py --method=trigger
+(for python API) $python sample.py --method=pyapi
+
+If you'd like to test performance on a specific method, you can use `-t` or `--test` to get testing results.
+More, you can specify the number of data through `--test_num`, default=10000.
 ```
 
 Remember to create database 'test' before executing this `sample.py`.

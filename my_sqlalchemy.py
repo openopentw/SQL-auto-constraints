@@ -29,6 +29,7 @@ class MySqlAlchemy(EngineBase):
             for i, val in enumerate(row):
                 if val is None or str(val).lower() == 'null':
                     null_cnt[i] += 1
+
         for i, col in enumerate(cols):
             if null_cnt[i] > 0:
                 self._update(ana_table_name,
@@ -40,6 +41,7 @@ class MySqlAlchemy(EngineBase):
         ana_table = self._select(ana_table_name, ['*'])
         for row in ana_table:
             col_name = row['col_name']
+            print(col_name)
             confidence = 1-row['null_cnt']/row['total_cnt']
             col_null_cnt = null_cnt[cols.index(col_name)]
             if confidence > 0.95 and col_null_cnt > 0:
@@ -51,6 +53,7 @@ class MySqlAlchemy(EngineBase):
         
     
     def _insert_ana_unique(self, ana_table_name, cols, vals):
+        
         """Check UNIQUE constraints"""
 
         #create columns combinations and list of counts
@@ -173,8 +176,8 @@ class MySqlAlchemy(EngineBase):
         self._create_table(table_name, cols)
 
         for cons in self._constraints:
+            ana_table_name = self._make_ana_name(table_name, cons)
             if cons == 'null':
-                ana_table_name = self._make_ana_name(table_name, cons)
                 self._create_table(ana_table_name, (('col_name', 'varchar(255)'),
                                                 (f'{cons}_cnt', 'int'),
                                                 ('total_cnt', 'int')))
@@ -183,16 +186,23 @@ class MySqlAlchemy(EngineBase):
                     ana_cols.append([col[0], 0, 0])
                 self._insert(ana_table_name, ('col_name', f'{cons}_cnt', 'total_cnt'), ana_cols)
 
-            if cons == 'unique':
-                ana_table_name = self._make_ana_name(table_name, cons)
+            elif cons == 'unique':
                 self._create_table(ana_table_name, (('col_name', 'varchar(255)'),
                                                     (f'{cons}_cnt', 'int')))
+                
+                # Extract only column name
+                col_names = [v[0] for v in cols]
                 all_combine = []
-                for set_len in range(1,len(cols)+1):
-                    for combines in combinations(cols , set_len):
-                        all_combine.append([list(combines), 0])
+                
+                for set_len in range(1, len(col_names)+1):
+                    for combines in combinations(col_names , set_len):
+                        all_combine.append(["-".join(combines), 0])
                 self._insert(ana_table_name, ('col_name', f'{cons}_cnt'), all_combine)
 
+            else:
+                self._create_table(ana_table_name, (('col_name', 'varchar(255)'),
+                                                (f'{cons}_cnt', 'int'),
+                                                ('total_cnt', 'int')))
 
 
     def drop_table(self, table_name):
