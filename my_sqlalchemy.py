@@ -1,8 +1,10 @@
 """ Base class for my sqlalchemy. """
 
-from base import EngineBase
-import warnings
 from itertools import combinations
+import warnings
+
+from base import EngineBase
+from constraints.referencial import Referencial
 
 def create_engine(create_str):
     """ My create engine. """
@@ -14,6 +16,7 @@ class MySqlAlchemy(EngineBase):
         super().__init__(create_str)
         print("You are Using python API to do analyzation.")
         self._constraints = ['null', 'default', 'unique']
+        self._cons_classes = [Referencial(self)]
 
     def _insert_ana_null(self, ana_table_name, cols, vals):
         """ Check Not Null constraint. """
@@ -179,6 +182,11 @@ class MySqlAlchemy(EngineBase):
             success = eval(f'self._insert_ana_{cons}(ana_table_name, cols, vals)')
             if not success:
                 break
+
+        for cons_class in self._cons_classes:
+            success = cons_class.before_insert(table_name, cols, vals)
+            if not success:
+                break
         
         if success:
             self._insert(table_name, cols, vals)
@@ -197,6 +205,9 @@ class MySqlAlchemy(EngineBase):
                 e.g.: [['ID', 'int'],
                        ['Name', 'varchar(255)']]
         """
+        for cons_class in self._cons_classes:
+            cons_class.before_create_table(table_name, cols)
+
         self._create_table(table_name, cols)
 
         for cons in self._constraints:
@@ -234,6 +245,9 @@ class MySqlAlchemy(EngineBase):
         Args:
             table_name: str
         """
+        for cons_class in self._cons_classes:
+            cons_class.before_drop_table(table_name)
+
         self._drop_table(table_name)
         
         for cons in self._constraints:

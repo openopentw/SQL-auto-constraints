@@ -54,7 +54,7 @@ class EngineBase(ABC):
             print(args, kwargs)
         return self._engine.execute(*args, **kwargs)
 
-    def _create_table(self, table_name, cols):
+    def _create_table(self, table_name, cols, if_not_exists=False, tmp=False):
         """ Create table.
         Args:
             table_name: str
@@ -63,7 +63,13 @@ class EngineBase(ABC):
                        ['Name', 'varchar(255)']]
         """
         type_str = ','.join([' '.join(col) for col in cols])
-        sql_str = (f'CREATE TABLE {table_name} ({type_str})')
+        if tmp:
+            sql_str = 'CREATE TEMPORARY TABLE'
+        else:
+            sql_str = 'CREATE TABLE'
+        if if_not_exists:
+            sql_str += ' IF NOT EXISTS'
+        sql_str += f' {table_name} ({type_str})'
         self._execute(sql_str)
 
     def _drop_table(self, table_name):
@@ -78,10 +84,12 @@ class EngineBase(ABC):
         Args:
             cols: (List/Tuple) [str]
             vals: (List/Tuple) [ (List/Tuple) [str/int] ]
+            ret_str: return string or execute.
         """
-        sql_str = (f'INSERT INTO {table_name}'
-                   f' ({", ".join(cols)})'
-                   f' VALUES {self._value_to_str(vals)}')
+        sql_str = f'INSERT INTO {table_name}'
+        if cols != 'all':
+            sql_str += f' ({", ".join(cols)})'
+        sql_str += f' VALUES {self._value_to_str(vals)}'
         self._execute(sql_str)
 
     def _update(self, table_name, cols, cond=''):
@@ -106,6 +114,17 @@ class EngineBase(ABC):
         cols_str = ','.join(cols)
         sql_str = (f'SELECT {cols_str}'
                    f' FROM {table_name}')
+        if cond:
+            sql_str += f' WHERE {cond}'
+        return self._execute(sql_str)
+
+    def _delete(self, table_name, cond=''):
+        """ Delete rows in a table.
+        Args:
+            table_name: str
+            cond: str
+        """
+        sql_str = (f'DELETE FROM {table_name}')
         if cond:
             sql_str += f' WHERE {cond}'
         return self._execute(sql_str)

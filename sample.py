@@ -21,6 +21,33 @@ def gen_data(cols_type, null_ratio, data_num):
     
     return list(zip(*data))
 
+def test_ref_cons(engine):
+    """ Test referencial constraints. """
+    table_student = 'Student'
+    table_school = 'School'
+
+    engine.create_table(table_student, (('ID', 'int'),
+                                       ('Name', 'varchar(255)')))
+    engine.create_table(table_school, (('ID', 'int'),
+                                       ('Name', 'varchar(255)'),
+                                       ('Location', 'varchar(255)')))
+
+    engine.insert(table_student, ('ID', 'name'), ((None, 'hi'),
+                                                 (1, 'NULL'),
+                                                 (2, 'orz')))
+    engine.insert(table_school, ('ID', 'name'), ((None, 'hi'),
+                                                 (2, 'aaa'),
+                                                 (3, 'bbb')))
+
+    print('in counts:')
+    print(pd.read_sql_query(f'SELECT * FROM _reference_analysis_2',
+                            engine._engine))
+
+    engine.drop_table(table_student)
+    engine.drop_table(table_school)
+    for con in engine._cons_classes:
+        con.drop_ana_table()
+
 def run(args):
     """ Run! """
     
@@ -37,7 +64,10 @@ def run(args):
     table_name = 'person'
     mission="null"
 
-    sql_password = getpass.getpass()
+    if 'sql_pass' in os.environ:
+        sql_password = os.environ['sql_pass']
+    else:
+        sql_password = getpass.getpass()
     create_str = (f'mysql+mysqlconnector://root:{sql_password}@localhost/'
                   f'{database}?charset=utf8mb4')
     engine = create_engine(create_str)
@@ -53,6 +83,8 @@ def run(args):
     print(pd.read_sql_query(f'SELECT * FROM {ana_table_name}', engine._engine))
 
     engine.drop_table(table_name)
+
+    test_ref_cons(engine)
 
     if args.test:
         print("Start Testing...")
