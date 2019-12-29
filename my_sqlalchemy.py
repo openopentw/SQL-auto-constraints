@@ -17,45 +17,65 @@ class MySqlAlchemy(EngineBase):
 
     def _insert_ana_null(self, ana_table_name, cols, vals):
         """ Check Not Null constraint. """
-        # cols not in col_name
-        in_col = ','.join(['"' + col + '"' for col in cols])
-        self._update(ana_table_name,
-                     [['null_cnt', f'null_cnt+{len(vals)}']],
-                     f'col_name NOT IN ({in_col})')
-
         # count "NULL"s
-        null_cnt = [0] * len(cols[0])
-        for row in vals:
-            for i, val in enumerate(row):
-                if val is None or str(val).lower() == 'null':
-                    null_cnt[i] += 1
+        ana_table = self._select(ana_table_name, ['*'])
+        null_cnt = {}
+        total_cnt = {}
+        for row in ana_table:
+            col_name = row['col_name']
+            null_cnt[col_name] = [row['null_cnt'], False]
+            total_cnt[col_name] = row['total_cnt'] + len(vals)
+            if col_name in cols:
+                for val in vals[cols.index(col_name)]:
+                    if val is None or str(val).lower() == 'null':
+                        null_cnt[col_name][0] += 1
+                        null_cnt[col_name][1] = True
+            else:
+                null_cnt[col_name] += len(vals)
+                null_cnt[col_name][1] = True
 
-        for i, col in enumerate(cols):
-            if null_cnt[i] > 0:
+        for col, cnt in null_cnt.items():
+            confidence = 1-cnt[0]/total_cnt[col]
+            if confidence > 0.95 and cnt[1]:
+                warnings.warn(f'Values in column {col_name} should not be NULL.')
+                while True:
+                    reply = input("Do you want to continue the insertion? [Y/n]: ")
+                    if reply.lower() == 'y' or reply.lower() == 'yes':
+                        break
+                    elif reply.lower() == 'n' or reply.lower() == 'no':
+                        print("Insertion aborted.")
+                        return False
+                    else:
+                        continue
+                break
+
+        # update analysis table
+        for col in cols:
+            if null_cnt[col][1]:
                 self._update(ana_table_name,
-                             [['null_cnt', f'null_cnt+{null_cnt[i]}']],
+                             [['null_cnt', f'{null_cnt[col][0]}']],
                              f'col_name = "{col}"')
         self._update(ana_table_name,
                     [['total_cnt', f'total_cnt+{len(vals)}']])
+        return True
 
-        ana_table = self._select(ana_table_name, ['*'])
-        for row in ana_table:
-            col_name = row['col_name']
-            print(col_name)
-            confidence = 1-row['null_cnt']/row['total_cnt']
-            col_null_cnt = null_cnt[cols.index(col_name)]
-            if confidence > 0.95 and col_null_cnt > 0:
-                warnings.warn(f'Values in column {col_name} should not be NULL.')
-
-    def _insert_ana_default(self, ana_table_name, cols, vals):
-        ### TO-DO
-        pass
-        
+    def _insert_ana_default(self, ana_table_name, cols, vals, method='max'):
+        default_values = {}
+        table_name = ana_table_name.split('_')[1]
+        if method == 'max':
+            for col_name in cols:
+                exe_str = (f'SELECT {col_name}, COUNT(*) AS cnt '
+                           f'FROM {table_name} '
+                           f'GROUP BY {col_name} ORDER BY cnt DESC LIMIT 1')
+                res = self._execute(exe_str).fetchone()
+                if res:
+                    default_values[col_name] = res["".join(col_name)]
+        return True
     
     def _insert_ana_unique(self, ana_table_name, cols, vals):
-        
-        """Check UNIQUE constraints"""
 
+        """Check UNIQUE constraints"""
+        
         #create columns combinations and list of counts
         agree_combine = []
         for set_len in range(1,len(cols)+1):
@@ -153,11 +173,15 @@ class MySqlAlchemy(EngineBase):
             cols: (List/Tuple) [str]
             vals: (List/Tuple) [ (List/Tuple) [str/int] ]
         """
-        self._insert(table_name, cols, vals)
-
+        success = True
         for cons in self._constraints:
             ana_table_name = self._make_ana_name(table_name, cons)
-            eval(f'self._insert_ana_{cons}(ana_table_name, cols, vals)')
+            success = eval(f'self._insert_ana_{cons}(ana_table_name, cols, vals)')
+            if not success:
+                break
+        
+        if success:
+            self._insert(table_name, cols, vals)
 
     def delete(self, table_name, cond):
         """ Delete some rows. """
