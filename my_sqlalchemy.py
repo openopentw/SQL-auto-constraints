@@ -79,69 +79,122 @@ class MySqlAlchemy(EngineBase):
 
         """Check UNIQUE constraints"""
         
-        #create columns combinations and list of counts
-        agree_combine = []
-        for set_len in range(1,len(cols)+1):
-            for combines in combinations(cols , set_len):
-                agree_combine.append(list(combines))
+        #confidence thershold
+        threshold = 2
 
-        agree_cnt = [0]*len(agree_combine)
+        #create columns combinations and list of counts
+        ana_table = self._select(ana_table_name , ['*'])
+        agree_combine = []
+        agree_cnt = []
+        for row in ana_table:
+            agree_combine.append(row['col_name'])
+            agree_cnt.append([row['unique_cnt'],False])
         
+        #print('agree_combine')
+        
+
         #select existing data
         exist_row = self._select(table_name, ['*'])
+
+        num_exist_row = exist_row.rowcount
 
         #find agree set
         agree_set = []
         #compare with existing rows
-        if len(exist_row) > 0 :
-
-            for row in exist_row:
-                for new_row in vals:
-                    agree_col = []
-                    for i in range(len(cols)):
-                        if len(set(row[i],new_row[i])) < 2:
-                            agree_col.append(cols[i])
-                    agree_cnt[agree_combine.index(agree_col)] += 1
-                    agree_set.append(agree_col)
+        for row in exist_row:
+            for new_row in vals:
+                agree_col = []
+                for i in range(len(cols)):
+                    if len(set((row[i],new_row[i]))) < 2:
+                        agree_col.append(cols[i]) 
+                #print('agree_col')
+                #print(agree_col)
+                if len(agree_col) > 0 :
+                    agree_cnt_idx = agree_combine.index("-".join(agree_col))
+                    agree_cnt[agree_cnt_idx][0] += 1
+                    agree_cnt[agree_cnt_idx][1] = True
+                    
+                    if agree_cnt[agree_cnt_idx][0] > threshold:
+                        agree_set.append(agree_col)
         
         #compare between new insert rows
-        if len(vals) > 1 :
+        for row_num in range(len(vals)-1):
+            row_one = vals[row_num]
+            #print(row_one)
+            for nxt_row_num in range(row_num+1 , len(vals)):
+                row_two = vals[nxt_row_num]
+                #print(row_two)
+                agree_col = []
+                for i in range(len(cols)):
+                    if len(set((row_one[i],row_two[i]))) < 2:
+                        agree_col.append(cols[i])
+                #print('agree_col')
+                #print(agree_col)
+                if len(agree_col) > 0 :
+                    agree_cnt_idx = agree_combine.index("-".join(agree_col))
+                    agree_cnt[agree_cnt_idx][0] += 1
+                    agree_cnt[agree_cnt_idx][1] = True
 
-            for row_num in range(len(vals)-1):
-                row_one = vals[row_num]
-                for nxt_row_num in range(row_num+1 , len(vals)):
-                    row_two = vals[nxt_row_num]
-                    agree_col = []
-                    for i in range(len(cols)):
-                        if len(set(row_one[i],row_two[i])) < 2:
-                            agree_col.append(cols[i])
-                    agree_cnt[agree_combine.index(agree_col)] += 1
-                    agree_set.append(agree_col)
+                    if agree_cnt[agree_cnt_idx][0] > threshold:
+                        agree_set.append(agree_col)
 
 
+        #warning
+        for i, combine in enumerate(agree_combine):
+            
+            if agree_cnt[i][0] > 0 and agree_cnt[i][0] < threshold and agree_cnt[i][1] and num_exist_row > 0:
 
-        #save counts to ana_table
-        for i, combine in agree_combine:
-            if agree_cnt[i] > 0:
-                self._update(ana_table_name , 
-                            [['unique_cnt' , f'unique_cnt+{agree_cnt[i]}']],
-                            f'col_name = "{combine}"')
+                warnings.simplefilter('always', UserWarning)
+                warnings.warn(f'Values in column set : {combine} should be UNIQUE.')
+
+                while True:
+                    reply = input("Do you want to continue the insertion? [Y/n]: ")
+                    if reply.lower() == 'y' or reply.lower() == 'yes':
+                        break
+                    elif reply.lower() == 'n' or reply.lower() == 'no':
+                        print("Insertion aborted.")
+                        self._update(ana_table_name , 
+                                    [['unique_cnt' , f'unique_cnt-{agree_cnt[i][0]}']],
+                                    f'col_name = "{combine}"')
+                        return False
+                    else:
+                        continue
+                break
+
+        #update analysis table
+        for i, combine in enumerate(agree_combine):
+            self._update(ana_table_name , 
+                                [['unique_cnt' , f'{agree_cnt[i][0]}']],
+                                f'col_name = "{combine}"')
+
 
         #find disagree set
-        disagree_set = []
-        for columns in agree_set:
-            disagree_col = set(cols) - set(columns)
-            disagree_set.append(disagree_col)
+        table_column = self._execute(f'SHOW columns from {table_name}')
+        
+        table_column_name = []
+        for row in table_column:
+            table_column_name.append(row[0])
+
+        #print(f"agree_set:{agree_set}")
+
+        disagree_set = [set(table_column_name)]
+        
+        if len(agree_set) > 0 :
+            disagree_set = [set(table_column_name) - set(x) for x in agree_set]
+
 
         #find necessary disagree set
         disagree_set.sort(key=lambda x: len(x))
+        
         nec_disagree_set = []
         while disagree_set:
             columns = disagree_set[0]
             nec_disagree_set.append(columns)
             disagree_set = [ x for x in disagree_set[1:] if not columns.issubset(x) ]
 
+
         #transversal
+
         elm = set.union(*nec_disagree_set)
 
         elm_combine = []
@@ -161,7 +214,10 @@ class MySqlAlchemy(EngineBase):
             unique_set.append(columns)
             all_unique_set = [ x for x in all_unique_set[1:] if not columns.issubset(x) ]
 
-        #warning
+        if len(unique_set) > 0:
+            print(f'{unique_set} have a high probability of being unique.')
+        
+        return True
 
     # execute sql commands
 
