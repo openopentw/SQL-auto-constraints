@@ -34,7 +34,7 @@ class MySqlAlchemy(EngineBase):
                         null_cnt[col_name][0] += 1
                         null_cnt[col_name][1] = True
             else:
-                null_cnt[col_name] += len(vals)
+                null_cnt[col_name][0] += len(vals)
                 null_cnt[col_name][1] = True
 
         for col, cnt in null_cnt.items():

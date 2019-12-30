@@ -32,10 +32,10 @@ def test_ref_cons(engine):
                                        ('Name', 'varchar(255)'),
                                        ('Location', 'varchar(255)')))
 
-    engine.insert(table_student, ('ID', 'name'), ((None, 'hi'),
+    engine.insert(table_student, ('ID', 'Name'), ((None, 'hi'),
                                                  (1, 'NULL'),
                                                  (2, 'orz')))
-    engine.insert(table_school, ('ID', 'name'), ((None, 'hi'),
+    engine.insert(table_school, ('ID', 'Name'), ((None, 'hi'),
                                                  (2, 'aaa'),
                                                  (3, 'bbb')))
 
