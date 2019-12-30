@@ -235,7 +235,15 @@ class MySqlAlchemy(EngineBase):
         success = True
         for cons in self._constraints:
             ana_table_name = self._make_ana_name(table_name, cons)
-            success = eval(f'self._insert_ana_{cons}(ana_table_name, cols, vals)')
+            if cons == 'null':
+                success = eval(f'self._insert_ana_{cons}(ana_table_name, cols, vals)')
+
+            elif cons == 'unique':
+                success = eval(f'self._insert_ana_{cons}(table_name, ana_table_name, cols, vals)')
+
+            else:
+                success = eval(f'self._insert_ana_{cons}(ana_table_name, cols, vals)')
+
             if not success:
                 break
 
