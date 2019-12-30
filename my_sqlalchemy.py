@@ -75,7 +75,7 @@ class MySqlAlchemy(EngineBase):
                     default_values[col_name] = res["".join(col_name)]
         return True
     
-    def _insert_ana_unique(self, ana_table_name, cols, vals):
+    def _insert_ana_unique(self,table_name, ana_table_name, cols, vals):
 
         """Check UNIQUE constraints"""
         
