@@ -48,3 +48,7 @@ class ConstraintBase(ABC):
             cols: (List/Tuple) [ (List/Tuple) [str/int] ]
             cond: str
         """
+
+    @abstractmethod
+    def update_cnt(self):
+        """ Update counts. """

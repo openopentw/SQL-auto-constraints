@@ -255,6 +255,9 @@ class MySqlAlchemy(EngineBase):
         if success:
             self._insert(table_name, cols, vals)
 
+            for cons_class in self._cons_classes:
+                cons_class.update_cnt()
+
     def delete(self, table_name, cond):
         """ Delete some rows. """
         # TODO: update analysis informations
